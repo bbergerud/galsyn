@@ -186,9 +186,9 @@ def moffat_model(
     return flux
 
 def sdss_model(
-    dx, 
-    dy, 
-    flux,
+    dx            : torch.Tensor,
+    dy            : torch.Tensor, 
+    flux          : torch.Tensor, 
     plate_scale   : float,
     b_column      : str = 'psfB',
     beta_column   : str = 'psfBeta',
@@ -197,7 +197,7 @@ def sdss_model(
     sigma2_column : str = 'psfSigma2',
     sigmaP_column : str = 'psfSigmaP',
     **kwargs,
-):
+) -> torch.Tensor:
     """
     Analytical model for a SDSS profile. Assumes the width has units of
     pixels (0.396'' plate scale). The normalized profile is of the form
