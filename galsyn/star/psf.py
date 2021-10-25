@@ -215,6 +215,31 @@ def sdss_model(
     flux : Tensor
         The total flux of the source
 
+    plate_scale : float
+        The plate scale of the image, in arcseconds / pixel
+
+    b_column : str
+        The name of the column associated with the ratio of the inner to
+        outer PSF at the origin.
+
+    beta_column : str
+        The name of the column associated with the slope of the powerlaw.
+
+    p0_column : str
+        The name of the column associated with the value of the powerlaw
+        at the origin.
+
+    sigma1_column : str
+        The name of the column associated with the inner gaussian sigma
+        for the composite fit.
+
+    sigma2_column : str
+        The name of the column associated with the outer gaussian sigma
+        for the composite fit.
+
+    sigmaP_column : str
+        The name of the column associated with the width of the powerlaw.
+
     Examples
     --------
     import matplotlib.pyplot as plt
