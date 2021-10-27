@@ -71,8 +71,20 @@ class SkyDetectorGenerator(BaseGenerator):
     import matplotlib.pyplot as plt
     import torch
     from galsyn.sky_detector import SkyDetectorGenerator
+    from galsyn.random import perlin2d
+    from galkit.functional import rescale
 
-    sky = SkyDetectorGenerator()
+    def transform(image):
+        return rescale(image, 0.5, 1.5)
+
+    def perturbation(image):
+        return image * perlin2d(
+            shape = image.shape[-2:],
+            resolution = (0.2, 0.2),
+            transform = transform
+        )
+
+    sky = SkyDetectorGenerator(perturbation=perturbation)
     output = sky(
         sample_size=3,
         shape=(128,128),
@@ -213,7 +225,7 @@ class SkyDetectorGenerator(BaseGenerator):
             # Sky has poisson noise in the photo-electrons rather than the counts
             sky = sky.mul(gain).expand(-1, *shape)
             if self.perturbation is not None:
-                sky = self.perturbation(sky)
+                sky = torch.stack([self.perturbation(x) for x in sky])
 
             if apply_noise:
                 noise = torch.poisson(dark.expand(-1,*shape)) + \
