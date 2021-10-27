@@ -61,7 +61,7 @@ def gaussian_model(
         The vertical pixel separation from the center of the source
 
     dy : Tensor
-        The horiztonal pixel separation from the center of the source
+        The horizontal pixel separation from the center of the source
 
     flux : Tensor
         The total flux of the source
@@ -132,7 +132,7 @@ def moffat_model(
         The vertical pixel separation from the center of the source
 
     dy : Tensor
-        The horiztonal pixel separation from the center of the source
+        The horizontal pixel separation from the center of the source
 
     flux : Tensor
         The total flux of the source
@@ -210,7 +210,7 @@ def sdss_model(
         The vertical pixel separation from the center of the source
 
     dy : Tensor
-        The horiztonal pixel separation from the center of the source
+        The horizontal pixel separation from the center of the source
 
     flux : Tensor
         The total flux of the source
