@@ -61,6 +61,7 @@ def accessor(
     dictionary  : dict = {},
     filter_band : Optional[str] = None,
     index       : Optional[int] = None,
+    default     : Optional[float] = None,
     **kwargs
 ):
     """
@@ -93,6 +94,9 @@ def accessor(
         If the parameter is contained in the dictionary, then this
         parameter is not used.
 
+    default : float, optional
+        Default value to use if the key is not found.
+
     **kwargs
         Any additional keyword arguments to pass into the `to_tensor` method.
 
@@ -104,8 +108,8 @@ def accessor(
     Raises
     ------
     ValueError
-        If the column isn't found in the dictionary or dataframe, then this
-        exception is raised.
+        If the column isn't found in the dictionary or dataframe and default is not
+        set, then this exception is raised.
 
     Examples
     --------
@@ -168,7 +172,10 @@ def accessor(
     # ======================================================================
     # If haven't found yet, raise error
     # ======================================================================
-    raise ValueError(f"Not able to find {column}")
+    if default is None:
+        raise ValueError(f"Not able to find {column}")
+    else:
+        return default
 
 def local_file(filename:str) -> str:
     """
