@@ -175,7 +175,7 @@ def accessor(
     if default is None:
         raise ValueError(f"Not able to find {column}")
     else:
-        return default
+        return to_tensor(default, **kwargs)
 
 def local_file(filename:str) -> str:
     """
