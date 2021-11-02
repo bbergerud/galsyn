@@ -33,8 +33,36 @@ class Geometry:
 
     Required Attributes
     -------------------
+    data : DataFrame
+        A pandas dataframe that contains the parameter data.
+
     device : torch.device
         The device on which to generate tensor data.
+
+    h0_column : dict, str
+        The name of the column associated with the vertical (height)
+        centroid component. Can also be a dictionary of such values
+        where the key is the component (e.g., disk, bar).
+    
+    w0_column : dict, str
+        The name of the column associated with the horizontal (width)
+        centroid component. Can also be a dictionary of such values
+        where the key is the component (e.g., disk, bar).
+    
+    pa_column : dict, str
+        The name of the column associated with the position angle.
+        Can also be a dictionary of such values where the key is
+        the component (e.g., disk, bar)
+
+    pa_column : dict, str
+        The name of the column associated with the flattening.
+        Can also be a dictionary of such values where the key is
+        the component (e.g., disk, bar).
+    
+    p_column : dict, str
+        The name of the column associated with ellipsoidal p value.
+        Can also be a dictionary of such values where the key is
+        the component (e.g., disk, bar).
     """
 
     def get_component_geometry(self,
