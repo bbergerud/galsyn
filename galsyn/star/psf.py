@@ -14,7 +14,7 @@ MoffatModel(core_width, power_index)
     the names of the core_width and power_index parameters
     upon initialization.
 
-DoubleGaussianPowerlawModel(b, beta, p0, sigma1, sigma2, sigmaP)
+SDSSModel(b, beta, p0, sigma1, sigma2, sigmaP)
     Interface to the sdss_model function that stores the
     names of the column parameters upon initialization.
 
@@ -30,7 +30,7 @@ moffat_model(dx, dy, flux, plate_scale, core_width_column, power_index_column **
         f(r;α,β) = (β-1)/(πα²)⋅[1 + (r²/α²)]ᵝ
     where α is the core width and β the power index.
 
-double_gaussian_powerlaw_model(dx, dy, flux, plate_scale, b_column, beta_column, p0_column,
+sdss_model(dx, dy, flux, plate_scale, b_column, beta_column, p0_column,
            sigma1_column, sigma2_column, sigmaP_column, **kwargs)
     Analytical model for a SDSS profile. Assumes the width has units of
     pixels (0.396'' plate scale). The normalized profile is of the form
@@ -39,7 +39,6 @@ double_gaussian_powerlaw_model(dx, dy, flux, plate_scale, b_column, beta_column,
 import math
 import torch
 from dataclasses import dataclass
-from galkit.functional import double_gaussian_powerlaw, gaussian, moffat
 from ..utils import accessor
 
 fwhm2std = 1 / math.sqrt(8 * math.log(2))   # Conversion factor
@@ -105,12 +104,10 @@ def gaussian_model(
     """
     fwhm  = accessor(fwhm_column, **kwargs)             # FWHM in arcseconds
     sigma = fwhm2std * fwhm / plate_scale               # STD in pixels
+    amplitude = flux / (2 * math.pi * sigma * sigma)
 
-    return flux * gaussian(
-        r = (dx**2 + dy**2).sqrt(),
-        sigma = sigma,
-        normalize = True,
-    )
+    flux = amplitude * torch.exp(-0.5 * (dx**2 + dy**2)/sigma**2)
+    return flux
 
 def moffat_model(
     dx                 : torch.Tensor,
@@ -181,14 +178,14 @@ def moffat_model(
     ax.imshow(image.squeeze())
     fig.show()
     """
-    return flux * moffat(
-        r = (dx**2 + dy**2),
-        core_width = accessor(core_width_column, **kwargs) / plate_scale,
-        power_index = accessor(power_index_column, **kwargs),
-        normalize = True,
-    )
+    alpha = accessor(core_width_column, **kwargs) / plate_scale
+    beta  = accessor(power_index_column, **kwargs)
+    amplitude = flux * (beta - 1) / (math.pi * alpha**2)
 
-def double_gaussian_powerlaw_model(
+    flux = amplitude * (dx.pow(2) + dy.pow(2)).div(alpha.pow(2)).add(1).pow(-beta)
+    return flux
+
+def sdss_model(
     dx            : torch.Tensor,
     dy            : torch.Tensor, 
     flux          : torch.Tensor, 
@@ -247,7 +244,7 @@ def double_gaussian_powerlaw_model(
     --------
     import matplotlib.pyplot as plt
     from galkit.spatial import coordinate, grid
-    from galsyn.star.psf import double_gaussian_powerlaw_model
+    from galsyn.star.psf import sdss_model
 
     dx, dy = coordinate.cartesian(
         grid = grid.pixel_grid(100, 100),
@@ -269,7 +266,7 @@ def double_gaussian_powerlaw_model(
         'filter_band': 'r',
     }
 
-    image = double_gaussian_powerlaw_model(dx, dy, 1, plate_scale=0.396, **kwargs)
+    image = sdss_model(dx, dy, 1, plate_scale=0.396, **kwargs)
 
     print(f'sum(image): {image.sum()}')
 
@@ -277,16 +274,24 @@ def double_gaussian_powerlaw_model(
     ax.imshow(image.squeeze())
     fig.show()
     """
-    return flux * double_gaussian_powerlaw(
-        r = (dx**2 + dy**2).sqrt() * (plate_scale / 0.396),
-        b = accessor(b_column, **kwargs),
-        beta = accessor(beta_column, **kwargs),
-        p0 = accessor(p0_column, **kwargs),
-        sigma1 = accessor(sigma1_column, **kwargs),
-        sigma2 = accessor(sigma2_column, **kwargs),
-        sigmaP = accessor(sigmaP_column, **kwargs),
-        normalize = True,
-    )
+    σ1_sq = accessor(sigma1_column, **kwargs)**2
+    σ2_sq = accessor(sigma2_column, **kwargs)**2
+    σp_sq = accessor(sigmaP_column, **kwargs)**2
+    b     = accessor(b_column, **kwargs)
+    β     = accessor(beta_column, **kwargs)
+    p0    = accessor(p0_column, **kwargs)
+
+    r_sq = dx.pow(2) + dy.pow(2) * (plate_scale / 0.396)**2
+
+    num  = r_sq.div(-2*σ1_sq).exp() \
+         + r_sq.div(-2*σ2_sq).exp().mul(b) \
+         + (1 + r_sq.div(β * σp_sq)).pow(-β/2).mul(p0)
+    den  = 1 + b + p0
+
+    int_val = (2*math.pi/den) * (σ1_sq + b*σ2_sq + p0*β*σp_sq/(β - 2))
+    amplitude = flux / int_val
+
+    return amplitude * num / den
 
 @dataclass
 class GaussianModel:
@@ -322,10 +327,10 @@ class MoffatModel:
         )
 
 @dataclass
-class DoubleGaussianPowerlawModel:
+class SDSSModel:
     """
-    Interface to the double_gaussian_powerlaw model function that
-    stores the names of the column parameters upon initialization.
+    Interface to the sdss_model function that stores the
+    names of the column parameters upon initialization.
     """
     b      : str = 'psfB'
     beta   : str = 'psfBeta'
@@ -335,7 +340,7 @@ class DoubleGaussianPowerlawModel:
     sigmaP : str = 'psfSigmaP'
 
     def __call__(self, *args, **kwargs):
-        return double_gaussian_powerlaw_model(
+        return sdss_model(
             *args,
             b_column      = self.b,
             beta_column   = self.beta,
