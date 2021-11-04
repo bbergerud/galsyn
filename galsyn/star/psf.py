@@ -278,7 +278,7 @@ def double_gaussian_powerlaw_model(
     fig.show()
     """
     return flux * double_gaussian_powerlaw(
-        r = (dx**2 + dy**2).sqrt() * (plate_scale / 0.396)**2,
+        r = (dx**2 + dy**2).sqrt() * (plate_scale / 0.396),
         b = accessor(b_column, **kwargs),
         beta = accessor(beta_column, **kwargs),
         p0 = accessor(p0_column, **kwargs),
