@@ -39,30 +39,33 @@ class Geometry:
     device : torch.device
         The device on which to generate tensor data.
 
-    h0_column : dict, str
-        The name of the column associated with the vertical (height)
-        centroid component. Can also be a dictionary of such values
-        where the key is the component (e.g., disk, bar).
-    
-    w0_column : dict, str
-        The name of the column associated with the horizontal (width)
-        centroid component. Can also be a dictionary of such values
-        where the key is the component (e.g., disk, bar).
-    
-    pa_column : dict, str
-        The name of the column associated with the position angle.
-        Can also be a dictionary of such values where the key is
-        the component (e.g., disk, bar)
+    column : Dict[str, Union[str,dict]]
+        A dictionary containing the following key, value pairs:
 
-    pa_column : dict, str
-        The name of the column associated with the flattening.
-        Can also be a dictionary of such values where the key is
-        the component (e.g., disk, bar).
-    
-    p_column : dict, str
-        The name of the column associated with ellipsoidal p value.
-        Can also be a dictionary of such values where the key is
-        the component (e.g., disk, bar).
+        h0 : dict, str
+            The name of the column associated with the vertical (height)
+            centroid component. Can also be a dictionary of such values
+            where the key is the component (e.g., disk, bar).
+        
+        w0 : dict, str
+            The name of the column associated with the horizontal (width)
+            centroid component. Can also be a dictionary of such values
+            where the key is the component (e.g., disk, bar).
+        
+        pa : dict, str
+            The name of the column associated with the position angle.
+            Can also be a dictionary of such values where the key is
+            the component (e.g., disk, bar)
+
+        q : dict, str
+            The name of the column associated with the flattening.
+            Can also be a dictionary of such values where the key is
+            the component (e.g., disk, bar).
+        
+        p : dict, str
+            The name of the column associated with ellipsoidal p value.
+            Can also be a dictionary of such values where the key is
+            the component (e.g., disk, bar).
     """
 
     def get_component_geometry(self,
@@ -155,11 +158,11 @@ class Geometry:
 
         θ_disk, r_disk = coordinate.polar(
             grid = grid,
-            h0 = access(self.h0_column, **keys),
-            w0 = access(self.w0_column, **keys),
-            pa = access(self.pa_column, **keys),
-            q  = access(self.q_column, **keys),
-            p  = access(self.p_column, **keys, default=2),
+            h0 = access(self.columns['h0'], **keys),
+            w0 = access(self.columns['w0'], **keys),
+            pa = access(self.columns['pa'], **keys),
+            q  = access(self.columns['q'], **keys),
+            p  = access(self.columns['p'], **keys, default=2),
             scale = scale,
             **kwargs
         )
@@ -168,21 +171,21 @@ class Geometry:
 
 
         if 'bar' in components:
-            pa_disk = access(self.pa_column, **keys)
-            q_disk  = access(self.q_column, **keys)
+            pa_disk = access(self.columns['pa'], **keys)
+            q_disk  = access(self.columns['q'], **keys)
 
             keys['component'] = 'bar'
-            pa_bar = access(self.pa_column, **keys)
+            pa_bar = access(self.columns['pa'], **keys)
             Δpa = angular_distance(pa_bar, pa_disk)
 
             geometry['bar'] = {
                 'r': coordinate.polar(
                     grid = grid,
-                    h0 = access(self.h0_column, **keys),
-                    w0 = access(self.w0_column, **keys),
-                    pa = access(self.pa_column, **keys),
-                    q  = access(self.q_column, **keys),
-                    p  = access(self.p_column, **keys, default=2),
+                    h0 = access(self.columns['h0'], **keys),
+                    w0 = access(self.columns['w0'], **keys),
+                    pa = access(self.columns['pa'], **keys),
+                    q  = access(self.columns['q'], **keys),
+                    p  = access(self.columns['p'], **keys, default=2),
                     scale = scale * torch.sqrt(Δpa.cos().pow(2) + Δpa.sin().div(q_disk).pow(2)),
                     **kwargs
                 )[-1]
@@ -195,11 +198,11 @@ class Geometry:
             geometry['bulge'] = {
                 'r' : coordinate.polar(
                     grid = grid,
-                    h0 = access(self.h0_column, **keys),
-                    w0 = access(self.w0_column, **keys),
-                    pa = access(self.pa_column, **keys),
-                    q  = access(self.q_column, **keys),
-                    p  = access(self.p_column, **keys, default=2),
+                    h0 = access(self.columns['h0'], **keys),
+                    w0 = access(self.columns['w0'], **keys),
+                    pa = access(self.columns['pa'], **keys),
+                    q  = access(self.columns['q'], **keys),
+                    p  = access(self.columns['p'], **keys, default=2),
                     scale = scale,
                     **kwargs
                 )[-1]
