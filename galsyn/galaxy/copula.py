@@ -62,14 +62,14 @@ class Copula:
 
         for c in components:
             # Get all the magnitude columns
-            magnitude_column = self.magnitude_column
+            magnitude_column = self.columns['magnitude']
             if isinstance(magnitude_column, dict):
                 magnitude_column = magnitude_column[c]
             cols = [c for c in self.data.columns if c.startswith(magnitude_column)]
 
             # Convert to flux
-            flux_column = self.flux_column
-            if isinstance(self.flux_column, dict):
+            flux_column = self.columns['flux']
+            if isinstance(flux_column, dict):
                 flux_column = flux_column[c]
             for col in cols:
                 filter_band = col.split('_')[-1]
