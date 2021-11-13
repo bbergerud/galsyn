@@ -274,7 +274,7 @@ class Photometric:
                     filter_band = filter_band,
                     profile = p,
                     metric = metric,
-                    value = value[i] if isinstance(value, Iterable) else value,
+                    value = value[i] if (isinstance(value, Iterable) and len(value) > 1) else value,
                 ) for i,p in enumerate(profile)
             ), device=self.device)
 
