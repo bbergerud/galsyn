@@ -18,6 +18,10 @@ local_file(filename)
 load_generator(filename)
     Returns a Gaussian Multivariate instance of the data stored in
     the provided filename.
+
+load_local_generator(filename)
+    Returns a Gaussian Multivariate instance of the locally stored
+    filename.
 """
 
 import os
@@ -189,3 +193,10 @@ def load_generator(filename:str) -> GaussianMultivariate:
     the provided filename.
     """
     return GaussianMultivariate.load(filename)
+
+def load_local_generator(filename:str):
+    """
+    Returns a Gaussian Multivariate instance of the locally stored
+    filename.
+    """
+    return load_generator(local_file(filename))
