@@ -1,3 +1,14 @@
+"""
+Perlin procedural noise.
+
+Functions
+---------
+perlin_2d(shape, θ, r, resolution, corner_grid, device, fade,
+         grid_base, grid_kwargs, repeat, rotation, transform)
+    Generates a random perlin noise image.
+
+"""
+
 import math
 import torch
 from galkit.spatial import coordinate, grid
@@ -15,6 +26,7 @@ def perlin2d(
     grid_kwargs : dict = {},
     repeat      : int = 256,
     rotation    : Optional[callable] = None,
+    shear       : float = 0.5,
     transform   : Optional[callable] = None,
 ):
     """
@@ -64,6 +76,13 @@ def perlin2d(
         A function that takes as input the azimuth and radial positions
         are returns the azimuth rotation value.
 
+    shear : callable, float
+        The fractional value of the rotation to apply. A value of 1 will
+        cause features to strongly follow the rotation pattern while a 
+        value of zero will remove the rotational effect. Can be either a
+        float or a function that returns a float. Only applied if a rotation
+        parameter is supplied.
+
     transform : callable, optional
         Transformation operation to apply to the noise map output.
 
@@ -110,7 +129,7 @@ def perlin2d(
     Generalize the rotation so that it can operate on both θ and r.
     """
     # Set-up the (x,y) coordinate system.
-    if grid_kwargs:
+    if (θ is not None and r is not None) or grid_kwargs or rotation:
         if (θ is None) or (r is None):
             if shape is None:
                 raise Exception("Must pass in either θ/r or shape parameter")
@@ -121,8 +140,8 @@ def perlin2d(
             )
 
         # Apply a rotation
-        if rotation is not None:
-            θ = θ + rotation(θ=θ, r=r)
+        if (shear > 0) and (rotation is not None):
+            θ = θ - shear * rotation(θ=θ, r=r)
 
         # Undo any scaling to the coordinate system
         if 'scale' in grid_kwargs:
@@ -213,6 +232,8 @@ def perlin2d_octaves(
     **kwargs
 ):
     """
+    
+
     Parameters
     ----------
     shape : Tuple[int,int]
