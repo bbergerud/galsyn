@@ -852,17 +852,14 @@ class Profile:
         if isinstance(input, torch.Tensor):
             return resample.downscale_local_mean(input,factor) if input.size(0) != 0 else input
 
-        else:
+        elif isinstance(input, dict):
             output = {}
             for k,v in input.items():
-                if isinstance(v, dict):
-                    output[k] = {}
-                    for kv,vv in v.items():
-                        output[k][kv] = resample.downscale_local_mean(vv,factor) if vv.size(0) != 0 else vv
-                else:
-                    output[k] = resample.downscale_local_mean(v,factor) if v.size(0) != 0 else v
-
+                output[k] = self.downscale(v, factor)
             return output
+
+        else:
+            raise Exception(f"{type(input)} not a valid format for the input.")
 
     def get_component_flux(self, 
         geometry     : Union[Dict, Tuple[Dict]], 
