@@ -130,13 +130,13 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         """
         super().sample(*args, **kwargs)
         components = self.get_components()
-        geometry = self.geometry_sampler(
+        self.projection = self.geometry_sampler(
             len(self.data),
             include_bar = 'bar' in components,
             include_bulge = 'bulge' in components,
             include_disk = 'disk' in components,
         )
-        for k,v in geometry.items():
+        for k,v in self.projection.items():
             self.data[k] = v
 
     def __call__(self,
@@ -158,6 +158,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         output_counts      : bool = True,
         output_galaxy_mask : bool = False,
         output_galaxy_s2n  : bool = False,
+        output_projection  : bool = False,
         oversample         : int = 1,
         plate_scale        : float = 0.396,
         s2n_mask_threshold : float = 1,
@@ -264,6 +265,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         --------
         import matplotlib.pyplot as plt
         import torch
+        import seaborn as sns
         from galkit.functional import fits2jpeg, to_tricolor
         from galsyn.galaxy.dataset import MendezAbreu as Galaxy
         from galsyn.sky_detector import SkyDetectorGenerator
@@ -290,6 +292,8 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             output_arm_s2n = True,
             output_galaxy_mask = True,
             output_galaxy_s2n = True,
+            output_projection = True,
+            oversample = 2,
         )
 
         def foo(i):
@@ -300,7 +304,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             if mask_arm.nelement() == 0:
                 mask_arm = torch.zeros(256,256)
             else:
-                mask_arm = to_tricolor(output['arm_mask'][i])
+                mask_arm = to_tricolor(output['arm_mask'][i], sns.color_palette('tab10'))
                 mask_arm = mask_arm / mask_arm.max()
 
             galaxy_s2n = output['galaxy_s2n'][i]
@@ -419,6 +423,10 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             flux = self.convert_counts_to_flux(flux, **kwargs)
 
         output['flux'] = flux
+
+        if output_projection:
+            output['projection'] = self.projection
+
         return output
 
 class Gadotti(Dataset):
@@ -524,7 +532,6 @@ class Gadotti(Dataset):
             }
         else:
             raise ValueError(f"{component} not found")
-
 
 class MendezAbreu(Dataset):
     """
