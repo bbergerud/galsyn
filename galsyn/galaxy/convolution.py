@@ -503,7 +503,7 @@ class MoffatConvolution:
     """
     core_width  : str = 'alpha'
     power_index : str = 'beta'
-    default_size : int = 4,
+    default_size : int = 4
 
     def __call__(self, *args, **kwargs):
         return moffat_convolution(
