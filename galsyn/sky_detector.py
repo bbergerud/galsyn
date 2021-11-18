@@ -1,4 +1,5 @@
 import json
+from copulas.multivariate.base import Multivariate
 import torch
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Tuple, Union
@@ -105,21 +106,20 @@ class SkyDetectorGenerator(BaseGenerator):
         foo(i)
     """
     def __init__(self,
-        generator_file        : str = local_file('field_generator_sdss.pkl'),
+        generator             : Multivariate = load_local_generator('field_generator_sdss.pkl'),
         dictionary_file       : str = local_file('field_dictionary_sdss.json'),
         dark_variance_column  : str = 'darkVariance',
         flux_per_count_column : str = 'nMgyPerCount',
         sky_column            : str = 'sky',
         gain_column           : str = 'gain',
-        device                : str = 'cpu',
+        device                : Optional[torch.device] = None,
         perturbation          : Optional[callable] = None
     ):
         """
         Parameters
         ----------
-        generator_file : str
-            The path location to the stored .pkl file, which is a stored model
-            of a GaussianMultivariate instance from the copulas library.
+        generator : Multivariate
+            A Multivariate copula generator.
 
         dictionary_file : str
             The path location to a stored .json file, which contains some
@@ -140,21 +140,20 @@ class SkyDetectorGenerator(BaseGenerator):
         gain_column : str
             The name of the column associated with the gain. Default is "gain".
 
-        device : str
-            The device to generate the data on. Uses pytorch tensors for the data
-            generation.
+        device : torch.device
+            The device to generate the data on.
 
         perturbation : callable
             A function that can be used to modified the sky background level.
             Useful for applying procedural noise to the image.
         """
-        self.generator  = load_generator(generator_file)
+        self.generator  = generator
         self.dictionary = json.loads(Path(dictionary_file).read_text())
         self.dark_variance_column = dark_variance_column
         self.flux_per_count_column = flux_per_count_column
         self.sky_column = sky_column
         self.gain_column = gain_column
-        self.device = torch.device(device)
+        self.device = device
         self.perturbation = perturbation
 
     def __call__(self,

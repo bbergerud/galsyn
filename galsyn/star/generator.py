@@ -1,3 +1,4 @@
+from copulas.multivariate.base import Multivariate
 import torch
 from galkit.functional.magnitude import sdss_mag2flux
 from galkit.spatial import coordinate, grid, resample
@@ -85,16 +86,16 @@ class StarGenerator(BaseGenerator):
         foo(i)
     """
     def __init__(self,
-        generator_file    : str = local_file('star_generator_sdss.pkl'),
+        generator         : Multivariate = load_local_generator('star_generator_sdss.pkl'),
         magnitude_column  : str = 'psfMag',
         magnitude_to_flux : callable = sdss_mag2flux,
         psf_model         : callable = SDSSModel(),
-        device            : str = 'cpu'
+        device            : Optional[torch.device] = None
     ):
         """
         Parameters
         ----------
-        generator_file : Text
+        generator : Multivariate
             The path location to the file containing the GaussianMultivariate copula.
 
         magnitude_column : Text
@@ -110,15 +111,14 @@ class StarGenerator(BaseGenerator):
             scale of the image, as well the sky-detector dictionary and dataframe
             parameters with the corresponding filter band, index, and device parameters.
 
-        device : Text
-            The device to generate data on. The input is passed into torch.device(device)
-            and stored in memory.
+        device : torch.device
+            The device to generate the data on.
         """
-        self.generator  = load_generator(generator_file)
+        self.generator = generator
         self.magnitude_column  = magnitude_column
         self.magnitude_to_flux = magnitude_to_flux
         self.psf_model = psf_model
-        self.device = torch.device(device)
+        self.device = device
 
     def sample(self, size:int) -> None:
         self.data = self.generator.sample(size)
