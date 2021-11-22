@@ -137,7 +137,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             include_disk = 'disk' in components,
         )
         for k,v in self.projection.items():
-            self.data[k] = v
+            self.data[k] = v.cpu().tolist()
 
     def __call__(self,
         shape              : Tuple[int,int],
