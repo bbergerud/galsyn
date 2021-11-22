@@ -127,7 +127,7 @@ class ImageGenerator:
                 )
                 incomplete = False
             except Exception as e:
-                pass
+                print(e)
 
         incomplete = True
         while incomplete:
@@ -142,7 +142,7 @@ class ImageGenerator:
                 )
                 incomplete = False
             except Exception as e:
-                pass
+                print(e)
 
         output_star = self.StarGenerator(
             stars_per_pixel = self.stars_per_pixel() if callable(self.stars_per_pixel) else self.stars_per_pixel,
@@ -246,4 +246,8 @@ class SyntheticDataset(ImageGenerator, torch.utils.data.Dataset):
                     sample[k] = v if v.size(0) == 0 else F.interpolate(v.unsqueeze(0), **self.ikeys).squeeze(0)
                 else:
                     sample[k] = {kk:vv if vv.size(0) == 0 else F.interpolate(v.unsqueeze(0), **self.ikeys).squeeze(0) for kk,vv in v.items()}
+
+        if self.transform is not None:
+            sample = self.transform(sample)
+
         return sample
