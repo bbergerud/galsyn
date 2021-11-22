@@ -218,7 +218,7 @@ class SyntheticDataset(ImageGenerator, torch.utils.data.Dataset):
         **kwargs
             Arguments to pass into the parent constructor.
         """
-        super().__init__(size=1, **kwargs)
+        super().__init__(**kwargs)
         self.size = size
         self.transform = transform
         self.ikeys = {
