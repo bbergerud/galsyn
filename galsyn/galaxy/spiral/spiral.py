@@ -104,6 +104,11 @@ class Spiral:
             return tuple(tuple(o[i] for o in output) for i in range(len(output[0])))
 
         pattern, mask = pattern(**geometry['disk'])
+
+        # If mask is empty, then apply no modulation
+        if mask.nelement() == 0:
+            return flux, mask
+
         f = fraction() if callable(fraction) else fraction
 
         flux['arm'] = {}
