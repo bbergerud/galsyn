@@ -179,7 +179,7 @@ class S2N:
         import matplotlib.pyplot as plt
         from galkit.spatial import grid
         from galsyn.sky_detector import SkyDetectorGenerator
-        from galsyn.galaxy.dataset import Gadotti as Galaxy
+        from galsyn.galaxy import Gadotti as Galaxy, load_local_generator
 
         filter_bands = 'irg'
         size  = 5
@@ -188,7 +188,7 @@ class S2N:
         sky = SkyDetectorGenerator()
         sky.sample(size)
 
-        galaxy = Galaxy()
+        galaxy = Galaxy(load_local_generator('gadotti_2009_bar_bulge_disk.pkl'))
         galaxy.sample(size)
         galaxy.convert_magnitude_to_flux(plate_scale=0.396)
         isoA = galaxy.get_isoMag(value=24.5, filter_band='r')
@@ -229,7 +229,7 @@ class S2N:
         if component is not None:
             if component not in flux:
                 empty = torch.tensor([], device=self.device)
-                return empty if operation is None else {k:empty for k in flux.keys()}
+                return empty if operation is not None else {k:empty for k in flux.keys()}
             flux = flux[component]
 
         output = {}
