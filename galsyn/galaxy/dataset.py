@@ -405,7 +405,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             if not component_output:
                 kwargs.update({
                     'flux': flux,
-                    'noise_level' : self.get_noise_level(flux, plate_scale=plate_scale),
+                    'noise_level' : self.get_noise_level(flux, plate_scale=plate_scale, **kwargs),
                     'operation': s2n_operation,
                 })
 
