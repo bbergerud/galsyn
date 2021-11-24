@@ -135,7 +135,7 @@ class StarGenerator(BaseGenerator):
         oversample       : int = 1,
         plate_scale      : float = 0.396,
         stars_per_pixel  : float = 2e-4,
-        threshold        : float = 1
+        s2n_mask_threshold : float = 1
     ) -> Dict:
         """
         Parameters
@@ -184,9 +184,9 @@ class StarGenerator(BaseGenerator):
             The average number of stars per pixel. The total number of stars
             is Poisson sampled based on the expectation value.
 
-        threshold : float
+        s2n_mask_threshold : float
             The threshold for defining the mask, which corresponds to
-                S/N > threshold
+                S/N > s2n_mask_threshold
             Only used if `output_star_mask=True`.
 
         Returns
@@ -271,9 +271,9 @@ class StarGenerator(BaseGenerator):
 
                     if output_star_mask:
                         if output_star_s2n:
-                            masks[k].append(s2n[k][-1] > threshold)
+                            masks[k].append(s2n[k][-1] > s2n_mask_threshold)
                         else:
-                            masks[k].append(flux > threshold * noise)
+                            masks[k].append(flux > s2n_mask_threshold * noise)
 
                 if apply_noise:
                     flux = torch.poisson(flux * gain) / gain
