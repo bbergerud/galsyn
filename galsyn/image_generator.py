@@ -161,7 +161,7 @@ class ImageGenerator:
             image[k] = output_skydetector[k] \
                      + output_star['flux'][k] \
                      + output_galaxy['flux'][0][k] \
-                     + output_bkg[0][k]
+                     + output_bkg['flux'][0][k]
         
         return {
             'image': torch.cat([v for v in image.values()]),
