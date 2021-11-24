@@ -230,7 +230,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
             Boolean indicating whether to output the S/N ratio of the bar.
             The threshold parameter is used for creating the mask.
 
-        output_galaxy_s2n : bool
+        output_galaxy_mask : bool
             Boolean indicating whether to output a mask of the galaxy. The S/N
             threshold is set py the parameter `s2n_mask_threshold`.
 
@@ -661,14 +661,20 @@ class BackgroundGalaxy:
         sky_detector = sky,
         filter_bands = 'irg',
         galaxies_per_pixel = 5e-4,
+        output_galaxy_s2n = True,
+        output_galaxy_mask = True,
     )
 
     def foo(i):
-        image = torch.cat([output[i][k] for k in 'irg'], dim=0)
+        image = torch.cat([output['flux'][i][k] for k in 'irg'], dim=0)
         image = fits2jpeg(image).permute(1,2,0)
+        mask = output['mask'][i].squeeze()
+        s2n = output['s2n'][i].squeeze()
 
-        fig, ax = plt.subplots()
-        ax.imshow(image)
+        fig, ax = plt.subplots(ncols=3)
+        ax[0].imshow(image)
+        ax[1].imshow(s2n)
+        ax[2].imshow(mask)
         fig.show()
     
     for i in range(len(sky)):
@@ -728,8 +734,11 @@ class BackgroundGalaxy:
         isoA_metric = IsoFlux(),
         isoA_value = None,
         isoA_scale : Union[callable,float] = lambda size, device : random_uniform(math.log(3), math.log(30), size, device).exp(),
+        output_galaxy_mask : bool = False,
+        output_galaxy_s2n : bool = False,
         oversample : Union[callable,int] = 1,
         plate_scale : Union[callable,float] = 0.396,
+        s2n_mask_threshold : float = 1,
     ):
         """
         Parameters
@@ -773,6 +782,13 @@ class BackgroundGalaxy:
             set as the sky background level. Note that the metric will need to be the
             IsoFlux for this to be valid.
 
+        output_galaxy_mask : bool
+            Boolean indicating whether to output a mask of the galaxies. The S/N
+            threshold is set py the parameter `s2n_mask_threshold`.
+
+        output_galaxy_s2n : bool
+            Boolean indicating whether to output the S/N ratio of the galaxies.
+
         oversample : int
             The oversampling factor to use when generating the flux.
             The final image will be downsampled to the indicated shape.
@@ -782,17 +798,22 @@ class BackgroundGalaxy:
         """
         sky_detector.sample(size)
 
-        collector = []
+        flux = []
         for i in range(size):
             gpp = galaxies_per_pixel() if callable(galaxies_per_pixel) else galaxies_per_pixel
             n = numpy.random.poisson(shape[0] * shape[1] * gpp)
 
             if n == 0:
                 zero = torch.zeros(shape, device=self.device)
-                collector.append({k:zero for k in filter_bands})
+                flux.append({k:zero for k in filter_bands})
+                if output_galaxy_mask:
+                    masks['mask'] = zero
+                if output_galaxy_s2n:
+                    masks['s2n'] = zero
                 continue
-        
-            images = {k:0 for k in filter_bands}
+
+            images  = {k:0. for k in filter_bands}
+            masks   = {}
             samples = numpy.random.randint(len(self.generators), size=n)
             samples = Counter(samples)
 
@@ -811,15 +832,25 @@ class BackgroundGalaxy:
                     size = size,
                     sky_detector = sky_detector,
                     sky_detector_index = i,
+                    s2n_mask_threshold=s2n_mask_threshold,
                 )
 
                 for k in filter_bands:
                     v = torch.stack([x[k] for x in output['flux']]).sum(dim=0)
-                    images[k] = images[k] if isinstance(v,float) else (images[k] + v)
-            
-            collector.append(images)
+                    images[k] = v if isinstance(images[k],float) else (images[k] + v)
+
+            flux.append(images)
+
+        output = {}
+        if output_galaxy_s2n | output_galaxy_mask:
+            noise = self.generators[0].get_noise_level(flux, sky_detector=sky_detector, plate_scale=plate_scale)
+            s2n = self.generators[0].get_s2n(flux, noise, sky_detector=sky_detector, operation=torch.mean)
+            if output_galaxy_s2n:
+                output['s2n'] = s2n
+            if output_galaxy_mask:
+                output['mask'] = tuple(s > s2n_mask_threshold for s in s2n)
 
         if apply_noise:
-            collector = self.generators[0].apply_shot_noise_to_counts(collector, sky_detector=sky_detector)
+            flux = self.generators[0].apply_shot_noise_to_counts(flux, sky_detector=sky_detector)
 
-        return collector
+        return {'flux': flux, **output}
