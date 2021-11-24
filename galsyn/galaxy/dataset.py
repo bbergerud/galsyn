@@ -25,6 +25,7 @@ MendezAbreu
 """
 import math
 import numpy
+import random
 import torch
 from collections import Counter
 from copulas.multivariate import Multivariate
@@ -75,6 +76,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         perturbation      : Optional[Dict[str,callable]] = {'disk_arm': (Disk(), HII(), Dust())},
         psf_model         : callable = DoubleGaussianPowerlawConvolution(),
         spiral            : callable = Ringermacher(),
+        spiral_fraction   : Union[callable, float] = lambda : random.uniform(0.2, 0.8),
     ):
         """
         Parameters
@@ -115,6 +117,10 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
 
         spiral : callable
             The model spiral pattern.
+
+        spiral_fraction : callable, float
+            The fractional amount of the disk flux that the spiral arms occupy.
+            Can also be a callable function.
         """
         self.__dict__.update(**locals())
 
@@ -358,7 +364,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         self.spiral.sample(self, isoA)
         if apply_pertrubation:
             flux = self.add_component_perturbation(flux, geometry, scale=isoA, rotation=self.spiral.rotation())
-        flux, mask_arm = self.add_spiral_flux(flux, geometry, self.spiral)
+        flux, mask_arm = self.add_spiral_flux(flux, geometry, self.spiral, self.spiral_fraction)
 
         if output_arm_mask:
             output['arm_mask'] = mask_arm
