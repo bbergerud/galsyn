@@ -244,6 +244,13 @@ class Photometric:
         isoA : tensor
             The radial distances roughly corresponding to where the metric is satisified.
 
+        Raises
+        ------
+        ValueError
+            If an isoA value of 0 is identified, then a ValueError is raised. One
+            case where this can happen is when the brightness is always lower than
+            the sky background fluctuation.
+
         Examples
         --------
         from galsyn.galaxy.dataset import Gadotti as Galaxy
@@ -287,4 +294,7 @@ class Photometric:
                 output = output + p(r, filter_band=filter_band)
             return output
 
-        return metric(r, func, value, filter_band)
+        isoA = metric(r, func, value, filter_band)
+        if (isoA == 0.).any():
+            raise ValueError(f"An isoA value of zero was found")
+        return isoA
