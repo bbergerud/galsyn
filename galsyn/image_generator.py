@@ -15,6 +15,7 @@ import numpy
 import random
 import torch
 import torch.nn.functional as F
+import traceback
 from typing import Iterable, Optional, Tuple, Union
 from galkit.functional.transform import arcsinh_stretch
 from .galaxy import BackgroundGalaxy, Gadotti, MendezAbreu, IsoFlux
@@ -87,7 +88,7 @@ class ImageGenerator:
             g.device = device
             g.spiral.arm_count = arm_count
 
-    def __call__(self, seed=None):
+    def __call__(self, seed=None, max_retry:int=10):
         if seed is not None:
             random.seed(seed)
             numpy.random.seed(seed)
@@ -108,8 +109,8 @@ class ImageGenerator:
         # The potential exist that when equating the flux value with the background
         # flux that the brightness is never large enough resulting in an error. 
         # We use a try loop to catch such cases here and for the background galaxies.
-        incomplete = True
-        while incomplete:
+        niter = 0
+        while True:
             try:
                 output_galaxy = Galaxy(
                     isoA_metric = self.isoA_metric,
@@ -125,12 +126,15 @@ class ImageGenerator:
                     size = 1,
                     **kwargs
                 )
-                incomplete = False
+                break
             except Exception as e:
-                print(e)
+                niter += 1
+                if niter >= max_retry:
+                    print("max_retry exceeded for galaxy")
+                    raise Exception(traceback.print_exc())
 
-        incomplete = True
-        while incomplete:
+        niter = 0
+        while True:
             try:
                 output_bkg = self.BkgGalaxyGenerator(
                     size = 1,
@@ -140,9 +144,12 @@ class ImageGenerator:
                     isoA_value  = self.isoA_value,
                     **kwargs,
                 )
-                incomplete = False
+                break
             except Exception as e:
-                print(e)
+                niter += 1
+                if niter >= max_retry:
+                    print("maxiter exceeded for background galaxies")
+                    raise Exception(traceback.print_exc())
 
         output_star = self.StarGenerator(
             stars_per_pixel = self.stars_per_pixel() if callable(self.stars_per_pixel) else self.stars_per_pixel,
