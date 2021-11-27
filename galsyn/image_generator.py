@@ -130,8 +130,8 @@ class ImageGenerator:
             except Exception as e:
                 niter += 1
                 if niter >= max_retry:
-                    print("max_retry exceeded for galaxy")
-                    raise Exception(traceback.print_exc())
+                    traceback.print_exc()
+                    raise Exception("max_retry exceeded for galaxy")
 
         niter = 0
         while True:
@@ -148,8 +148,8 @@ class ImageGenerator:
             except Exception as e:
                 niter += 1
                 if niter >= max_retry:
-                    print("maxiter exceeded for background galaxies")
-                    raise Exception(traceback.print_exc())
+                    traceback.print_exc()
+                    raise Exception("maxiter exceeded for background galaxies")
 
         output_star = self.StarGenerator(
             stars_per_pixel = self.stars_per_pixel() if callable(self.stars_per_pixel) else self.stars_per_pixel,
