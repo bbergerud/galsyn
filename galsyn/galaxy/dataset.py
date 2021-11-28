@@ -810,7 +810,7 @@ class BackgroundGalaxy:
             n = numpy.random.poisson(shape[0] * shape[1] * gpp)
 
             if n == 0:
-                zero = torch.zeros(shape, device=self.device)
+                zero = torch.zeros((1,*shape), device=self.device)
                 flux.append({k:zero for k in filter_bands})
                 if output_galaxy_mask:
                     masks['mask'] = zero
