@@ -51,10 +51,10 @@ This library is designed for generating synthetic galaxy images. It has methods 
 ```
 
 ## Sky-Detector
-The sky-detector copula (field_generator_sdss.pkl) is constructed by randomly sampling 5000 entries from the SDSS [Field](http://skyserver.sdss.org/dr7/en/help/browser/browser.asp?n=Field&t=U) table. It generates parameters related to the sky background, detector noise, and the point-spread function for each of the $ugriz$ filter bands.
+The sky-detector copula (field_generator_sdss.pkl) is constructed by randomly sampling 5000 entries from the SDSS [Field](http://skyserver.sdss.org/dr7/en/help/browser/browser.asp?n=Field&t=U) table. It generates parameters related to the sky background, detector noise, and the point-spread function for each of the *ugriz* filter bands.
 
 ## Star
-The star copula (star_generator_sdss.pkl) was constructed by randomly sampling 5000 entries from the SDSS [Star](http://skyserver.sdss.org/dr7/en/help/browser/browser.asp?n=Star&t=U) table. It generates PSF magnitudes for each the $ugriz$ filter bands.
+The star copula (star_generator_sdss.pkl) was constructed by randomly sampling 5000 entries from the SDSS [Star](http://skyserver.sdss.org/dr7/en/help/browser/browser.asp?n=Star&t=U) table. It generates PSF magnitudes for each the *ugriz* filter bands.
 
 ## Galaxy
-The galaxy copulas were constructed using the data from [Gadotti (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.393.1531G/abstract) and [Mendez-Abreu et al (2017)](https://ui.adsabs.harvard.edu/abs/2017A%26A...598A..32M/abstract). A linear interpolation was performed to extend parameters values to the $u$ and $z$ bands.
+The galaxy copulas were constructed using the data from [Gadotti (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.393.1531G/abstract) and [Mendez-Abreu et al (2017)](https://ui.adsabs.harvard.edu/abs/2017A%26A...598A..32M/abstract). A linear interpolation was performed to extend parameters values to the *u* and *z* bands.
