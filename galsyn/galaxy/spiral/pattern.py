@@ -22,6 +22,7 @@ RingermacherPitch
 import math
 import torch
 from typing import Optional, Tuple, Union
+from .logarithmic import θ_logarithmic
 from .profile import ShockProfile
 from ...random import random_normal, random_uniform
 
@@ -60,7 +61,7 @@ class SpiralPattern:
     def __init__(self,
         amplitude : callable = lambda size, device : random_normal(0, 1, size, device).softmax(-1),
         arm_count : callable = lambda size, device : torch.multinomial(torch.tensor([2, 0, 1, 1, 1, 1], dtype=torch.float32, device=device), num_samples=size, replacement=True),
-        phase     : callable = lambda size, device : random_uniform(-math.pi, math.pi, 1, device) + torch.arange(-math.pi, math.pi, 2*math.pi/size, device=device) + random_normal(0, math.pi/(3*size), size, device),
+        phase     : callable = lambda size, device : random_uniform(-math.pi, math.pi, 1, device) + torch.arange(-math.pi, math.pi, 2*math.pi/size, device=device) + random_normal(0, math.pi/(4*size), size, device),
         profile   : callable = ShockProfile(),
         sign      : callable = lambda size, device : torch.randn(size, device=device).sign(),
     ):
@@ -241,6 +242,63 @@ class SpiralPattern:
                 return False
         return True
 
+class Logarithmic(SpiralPattern):
+    """
+    Spiral pattern following a logarithmic pattern,
+
+        θ(u,α) = ∫ du' / tan(α)
+
+    Parameters
+    ----------
+    α : callable
+        A function that takes as input the size (number of arms)
+        and device and returns the pitch angles.
+
+    **kwargs
+        Any additional arguments to pass into the parent class.
+    """
+    def __init__(self,
+        α : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
+        **kwargs,
+    ):
+        self.α = α
+        super().__init__(**kwargs)
+
+    def function(self,
+        r  : torch.Tensor,
+        α  : Union[callable, float, torch.Tensor], 
+        r0 : Union[float, torch.Tensor] = 1,
+        **kwargs
+    ) -> torch.Tensor:
+        """
+        The functional form of the expression.
+        """
+        return θ_logarithmic(α=α, r=r, r0=r0)
+
+    def sample(self, cls, isoA:torch.Tensor, **kwargs) -> None:
+        """
+        Generates random values for the different parameters, which are
+        stored in the attribute `params`.
+
+        Parameters
+        ----------
+        cls : class
+            The galaxy class object.
+
+        isoA : tensor
+            The scaling factors used to rescale the base grid when generating
+            the geometry. The Wa values are multiplied by this.
+
+        **kwargs
+            Used for possible compatibility with other classes.
+        """
+        super().sample(cls=cls, isoA=isoA, **kwargs)
+
+        arm_count = self.data['arm_count']
+        self.params = ({
+            'α' : tuple(self.α(n, device=cls.device) for n in arm_count),            
+        })
+
 class Ringermacher(SpiralPattern):
     """
     Spiral arm pattern drawn from Ringermacher & Mead (2009),
@@ -250,20 +308,16 @@ class Ringermacher(SpiralPattern):
     Parameters
     ----------
     Wa : callable
-        A function that takes as input the size and device and returns
-        the Wa parameters. Whether the size reflects the number of arms
-        of the number of galaxies is set by the parameter `share_pattern`.
-        Note that the values are rescaled by the isoA value when evaluated.
+        A function that takes as input the size (number of arms)
+        and device and returns the Wa parameters.
 
     Wb : callable
-        A function that takes as input the size and device and returns
-        the Wb parameters. Whether the size reflects the number of arms
-        of the number of galaxies is set by the parameter `share_pattern`.
+        A function that takes as input the size (number of arms)
+        and device and returns the Wb parameters.
 
     Wn : callable
-        A function that takes as input the size and device and returns
-        the Wn parameters. Whether the size reflects the number of arms
-        of the number of galaxies is set by the parameter `share_pattern`.
+        A function that takes as input the size (number of arms)
+        and device and returns the Wn parameters.
 
     **kwargs
         Any additional arguments to pass into the parent class.
@@ -331,15 +385,12 @@ class RingermacherPitch(SpiralPattern):
     Parameters
     ----------
     Φ : callable
-        A function that takes as input the size and device and returns
-        the Φ parameters. Whether the size reflects the number of arms
-        of the number of galaxies is set by the parameter `share_pattern`.
+        A function that takes as input the size (number of arms)
+        and device and returns the Φ parameters.
 
     RΦ : callable
-        A function that takes as input the size and device and returns
-        the RΦ parameters. Whether the size reflects the number of arms
-        of the number of galaxies is set by the parameter `share_pattern`.
-        Note that the values are rescaled by the isoA value when evaluated. 
+        A function that takes as input the size (number of arms)
+        and device and returns the RΦ parameters.
 
     **kwargs
         Any additional arguments to pass into the parent class.
