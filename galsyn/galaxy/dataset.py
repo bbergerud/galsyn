@@ -39,7 +39,7 @@ from .photometric import Photometric, IsoFlux
 from .profile import ExponentialBreak, Ferrer, Profile, Sersic
 from .procedural import Perturbation, Disk, Dust, HII
 from .signal import S2N
-from .spiral import Ringermacher, Spiral
+from .spiral import Logarithmic, Spiral
 from .utils import access
 from ..sky_detector import SkyDetectorGenerator
 from ..random import random_uniform
@@ -75,7 +75,7 @@ class Dataset(BaseGenerator, Copula, Geometry, Perturbation, Photometric, Profil
         geometry_sampler  : callable = GeometrySampler(),
         perturbation      : Optional[Dict[str,callable]] = {'disk_arm': (Disk(), HII(), Dust())},
         psf_model         : callable = DoubleGaussianPowerlawConvolution(),
-        spiral            : callable = Ringermacher(),
+        spiral            : callable = Logarithmic(),
         spiral_fraction   : Union[callable, float] = lambda : random.uniform(0.2, 0.8),
     ):
         """
