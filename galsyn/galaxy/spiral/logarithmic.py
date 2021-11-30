@@ -19,7 +19,7 @@ if torch.cuda.is_available() and torch.cuda.current_device():
 
 def θ_logarithmic(
     α      : Union[callable, float, torch.Tensor], 
-    φ      : Union[float, torch.Tensor], 
+    φ      : Union[float, torch.Tensor] = 0, 
     r      : Optional[torch.Tensor] = None, 
     r0     : Optional[Union[float, torch.Tensor]] = None,
     u      : Optional[torch.Tensor] = None, 
