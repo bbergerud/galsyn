@@ -10,6 +10,10 @@ SpiralPattern
     the radial distances and parameter values and returns the azimuthal
     position of the spiral arm.
 
+Logarithmic
+    Spiral pattern following a logarithmic pattern,
+        θ(u,α) = ∫ du' / tan(α)
+
 Ringermacher
     Spiral arm pattern drawn from Ringermacher & Mead (2009),  
         θ(r,Wa,Wb,Wn) = 2⋅Wn⋅arctan(exp(Wa/r) / Wb)
