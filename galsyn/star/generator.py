@@ -3,7 +3,7 @@ import torch
 from galkit.functional.magnitude import sdss_mag2flux
 from galkit.spatial import coordinate, grid, resample
 from typing import Dict, Iterable, Tuple
-from .psf import SDSSModel
+from .psf import DoubleGaussianPowerlawModel
 from ..utils import *
 
 class StarGenerator(BaseGenerator):
@@ -41,10 +41,10 @@ class StarGenerator(BaseGenerator):
     import matplotlib.pyplot as plt
     from galkit.functional.transform import fits2jpeg, arcsinh_stretch
     from galsyn.sky_detector import SkyDetectorGenerator
-    from galsyn.star import StarGenerator, SDSSModel
+    from galsyn.star import StarGenerator, DoubleGaussianPowerlawModel
 
     sky  = SkyDetectorGenerator()
-    star = StarGenerator(psf_model=SDSSModel())
+    star = StarGenerator(psf_model=DoubleGaussianPowerlawModel())
 
     sky.sample(2)
 
@@ -89,7 +89,7 @@ class StarGenerator(BaseGenerator):
         generator         : Multivariate = load_local_generator('star_generator_sdss.pkl'),
         magnitude_column  : str = 'psfMag',
         magnitude_to_flux : callable = sdss_mag2flux,
-        psf_model         : callable = SDSSModel(),
+        psf_model         : callable = DoubleGaussianPowerlawModel(),
         device            : Optional[torch.device] = None
     ):
         """
