@@ -20,7 +20,7 @@ from typing import Iterable, Optional, Tuple, Union
 from galkit.functional.transform import arcsinh_stretch
 from .galaxy import BackgroundGalaxy, Gadotti, MendezAbreu, IsoFlux
 from .sky_detector import SkyDetectorGenerator
-from .star import StarGenerator, SDSSModel, DiffractionWithoutPhase
+from .star import StarGenerator, DoubleGaussianPowerlawModel, DiffractionWithoutPhase
 from .random import random_uniform
 from .utils import load_local_generator
 
@@ -75,7 +75,7 @@ class ImageGenerator:
         oversample : Union[callable, int] = 2,
         shape : Union[int, callable] = lambda : numpy.random.choice(numpy.arange(48,257,16)),
         SkyDetector = SkyDetectorGenerator(),
-        StarGenerator = StarGenerator(psf_model=DiffractionWithoutPhase(SDSSModel(), width=0.1, fraction=0.90)),
+        StarGenerator = StarGenerator(psf_model=DiffractionWithoutPhase(DoubleGaussianPowerlawModel(), width=0.1, fraction=0.90)),
         stars_per_pixel : Union[callable, float] = 4e-4,
     ):
         self.__dict__.update(**locals())

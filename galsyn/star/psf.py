@@ -14,8 +14,8 @@ MoffatModel(core_width, power_index)
     the names of the core_width and power_index parameters
     upon initialization.
 
-SDSSModel(b, beta, p0, sigma1, sigma2, sigmaP)
-    Interface to the sdss_model function that stores the
+DoubleGaussianPowerlawModel(b, beta, p0, sigma1, sigma2, sigmaP)
+    Interface to the double_gaussian_powerlaw_model function that stores the
     names of the column parameters upon initialization.
 
 Functions
@@ -30,7 +30,7 @@ moffat_model(dx, dy, flux, plate_scale, core_width_column, power_index_column **
         f(r;α,β) = (β-1)/(πα²)⋅[1 + (r²/α²)]ᵝ
     where α is the core width and β the power index.
 
-sdss_model(dx, dy, flux, plate_scale, b_column, beta_column, p0_column,
+double_gaussian_powerlaw_model(dx, dy, flux, plate_scale, b_column, beta_column, p0_column,
            sigma1_column, sigma2_column, sigmaP_column, **kwargs)
     Analytical model for a SDSS profile. Assumes the width has units of
     pixels (0.396'' plate scale). The normalized profile is of the form
@@ -185,7 +185,7 @@ def moffat_model(
     flux = amplitude * (dx.pow(2) + dy.pow(2)).div(alpha.pow(2)).add(1).pow(-beta)
     return flux
 
-def sdss_model(
+def double_gaussian_powerlaw_model(
     dx            : torch.Tensor,
     dy            : torch.Tensor, 
     flux          : torch.Tensor, 
@@ -244,7 +244,7 @@ def sdss_model(
     --------
     import matplotlib.pyplot as plt
     from galkit.spatial import coordinate, grid
-    from galsyn.star.psf import sdss_model
+    from galsyn.star.psf import double_gaussian_powerlaw_model
 
     dx, dy = coordinate.cartesian(
         grid = grid.pixel_grid(100, 100),
@@ -266,7 +266,7 @@ def sdss_model(
         'filter_band': 'r',
     }
 
-    image = sdss_model(dx, dy, 1, plate_scale=0.396, **kwargs)
+    image = double_gaussian_powerlaw_model(dx, dy, 1, plate_scale=0.396, **kwargs)
 
     print(f'sum(image): {image.sum()}')
 
@@ -327,9 +327,9 @@ class MoffatModel:
         )
 
 @dataclass
-class SDSSModel:
+class DoubleGaussianPowerlawModel:
     """
-    Interface to the sdss_model function that stores the
+    Interface to the double_gaussian_powerlaw_model function that stores the
     names of the column parameters upon initialization.
     """
     b      : str = 'psfB'
@@ -340,7 +340,7 @@ class SDSSModel:
     sigmaP : str = 'psfSigmaP'
 
     def __call__(self, *args, **kwargs):
-        return sdss_model(
+        return double_gaussian_powerlaw_model(
             *args,
             b_column      = self.b,
             beta_column   = self.beta,
