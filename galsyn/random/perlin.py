@@ -141,7 +141,7 @@ def perlin2d(
 
         # Apply a rotation
         if (shear > 0) and (rotation is not None):
-            θ = θ - shear * rotation(θ=θ, r=r)
+            θ = θ - shear * (rotation(θ=θ, r=r) if callable(rotation) else rotation)
 
         # Undo any scaling to the coordinate system
         if 'scale' in grid_kwargs:
@@ -305,6 +305,10 @@ def perlin2d_octaves(
     fig.show()    
     """
     noise = torch.zeros(shape, device=device)
+
+    if 'rotation' in kwargs:
+        if ('r' in kwargs) and ('θ' in kwargs) and callable(kwargs['rotation']):
+            kwargs['rotation'] = kwargs['rotation'](r=kwargs['r'], θ=kwargs['θ'])
 
     frequency = 1
     amplitude = 1
