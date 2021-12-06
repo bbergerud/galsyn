@@ -731,7 +731,6 @@ class BackgroundGalaxy:
 
     def __call__(self,
         shape : Tuple[int,int],
-        size  : int,
         filter_bands : Iterable,
         sky_detector : SkyDetectorGenerator,
         apply_noise : bool = True,
@@ -744,6 +743,7 @@ class BackgroundGalaxy:
         output_galaxy_s2n : bool = False,
         oversample : Union[callable,int] = 1,
         plate_scale : Union[callable,float] = 0.396,
+        size  : Optional[int] = None,
         s2n_mask_threshold : float = 1,
     ):
         """
@@ -802,7 +802,9 @@ class BackgroundGalaxy:
         plate_scale : float
             The plate_scale scale of the image in arcseconds / pixel
         """
-        sky_detector.sample(size)
+        if size is not None:
+            sky_detector.sample(size)
+        size = len(sky_detector)
 
         flux = []
         for i in range(size):
