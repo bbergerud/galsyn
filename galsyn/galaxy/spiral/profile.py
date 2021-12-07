@@ -20,7 +20,7 @@ ExponentialProfile
 import math
 import torch
 from dataclasses import dataclass
-from galkit.functional import angular_distance, sigmoid
+from galkit.functional import angular_distance, sigmoid, mod_angle
 from typing import Optional, Tuple, Union
 from .modulate import Damping
 from ...random import random_uniform
@@ -58,6 +58,11 @@ class ShockProfile:
         A function that takes as input the number of arms and the device
         and returns the power index associated with the post-shock regime.
 
+    δ_shock : callable
+        A function that takes as input the number of arms and the device
+        and returns the positional offset of the shock from the spiral
+        potential.
+
     modulate : callable, optional
         A class that applies damping to the spiral arm pattern. Useful
         for preventing the spiral arms from propagating into the center
@@ -79,6 +84,7 @@ class ShockProfile:
     transition : callable = lambda size, device : random_uniform(0.05, 0.15, 1, device)
     p_shock    : callable = lambda size, device : random_uniform(10, 15, size, device)
     p_arm      : callable = lambda size, device : random_uniform(5, 10, size, device)
+    δ_shock    : callable = lambda size, device : random_uniform(0, 0.25, size, device)
     modulate   : Optional[callable] = Damping()   
 
     def __call__(self,
@@ -129,7 +135,7 @@ class ShockProfile:
         params = self[index]
 
         # Calculate the angular offsets
-        dx = angular_distance(θ, θ_spiral, absolute=False) / math.pi
+        dx = angular_distance(θ, θ_spiral, absolute=False)
         if sign < 0:
             dx = -dx
 
@@ -159,13 +165,21 @@ class ShockProfile:
         mask = ~mask
         power[mask] = P1[mask]
 
-        mask = (1 - dx.abs()).pow(power)
+        # Generate the flux offsets
+        δ_shock = params['δ_shock'].squeeze()
+        δ_shock = δ_shock if δ_shock.nelement() == 1 else δ_shock[arm_index]
+        dx_profile = mod_angle(dx, δ_shock * t)
+
+        # Generate the mask and flux perturbation
+        mask = (1 - dx.abs()/math.pi).pow((p_arm + p_shock)*0.5)
+        profile = (1 - dx_profile.abs()/math.pi).pow(power)
 
         if self.modulate is not None:
             modulate = self.modulate(r=r, θ=θ, index=index, arm_index=arm_index)
             mask = mask * modulate
+            profile = profile * modulate
 
-        profile = mask * self.norm(P1, P2)
+        profile = profile * self.norm(P1, P2)
         return profile, mask
 
     def __getitem__(self, index:int) -> dict:
@@ -201,6 +215,7 @@ class ShockProfile:
             'transition': tuple(self.transition(size=n, device=cls.device) for n in arm_count),
             'p_shock'   : tuple(self.p_shock(size=n, device=cls.device) for n in arm_count),
             'p_arm'     : tuple(self.p_arm(size=n, device=cls.device) for n in arm_count),
+            'δ_shock'   : tuple(self.δ_shock(size=n, device=cls.device) for n in arm_count),
         }
         if self.modulate is not None:
             self.modulate.sample(cls=cls, isoA=isoA, arm_count=arm_count, **kwargs)
