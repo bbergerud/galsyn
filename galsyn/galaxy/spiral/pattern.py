@@ -14,6 +14,13 @@ Logarithmic
     Spiral pattern following a logarithmic pattern,
         θ(u,α) = ∫ du' / tan(α)
 
+LogarithmicSigmoid
+    Spiral pattern following a logarithmic pattern,
+        θ(u,α) = ∫ du' / tan(α(u))
+    where the pitch angle has a sigmoidal radial dependence
+    between two pitch angles.
+        α(r) = αᵢ + (α_f - αᵢ) ⋅ sigmoid(r, loc⋅isoA, scale⋅isoA)
+
 Ringermacher
     Spiral arm pattern drawn from Ringermacher & Mead (2009),  
         θ(r,Wa,Wb,Wn) = 2⋅Wn⋅arctan(exp(Wa/r) / Wb)
@@ -25,6 +32,7 @@ RingermacherPitch
 """
 import math
 import torch
+from galkit.functional import sigmoid
 from typing import Optional, Tuple, Union
 from .logarithmic import θ_logarithmic
 from .profile import ShockProfile
@@ -301,6 +309,93 @@ class Logarithmic(SpiralPattern):
         arm_count = self.data['arm_count']
         self.params = ({
             'α' : tuple(self.α(n, device=cls.device) for n in arm_count),            
+        })
+
+class LogarithmicSigmoid(SpiralPattern):
+    """
+    Spiral pattern following a logarithmic pattern,
+
+        θ(u,α) = ∫ du' / tan(α(u))
+
+    where the pitch angle has a sigmoidal radial dependence
+    between two pitch angles.
+
+        α(r) = αᵢ + (α_f - αᵢ) ⋅ sigmoid(r, loc⋅isoA, scale⋅isoA)
+
+    Parameters
+    ----------
+    α_i : callable
+        A function that takes as input the size (number of arms)
+        and device and returns the inner pitch angles.
+
+    α_f : callable
+        A function that takes as input the size (number of arms)
+        and device and returns the outer pitch angles.
+
+    loc : callable
+        A function that takes as input the size (number of arms)
+        and device and returns the transition point. Note that the
+        returned value is multiplied by the isoA value.
+
+    scale : callable
+        A function that takes as input the size (number of arms)
+        and device and returns the scale factor. Note that the
+        returned value is multiplied by the isoA value.
+    """
+    def __init__(self,
+        α_i     : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
+        α_f     : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
+        loc     : callable = lambda size, device : random_uniform(0, 1.0, 1, device),
+        scale   : callable = lambda size, device : random_uniform(0.1, 0.5, 1, device),
+        **kwargs,
+    ):
+        self.α_i = α_i
+        self.α_f = α_f
+        self.loc = loc
+        self.scale = scale
+        super().__init__(**kwargs)
+
+    def function(self,
+        r     : torch.Tensor,
+        α_i   : Union[float, torch.Tensor], 
+        α_f   : Union[float, torch.Tensor],
+        loc   : Union[float, torch.Tensor],
+        scale : Union[float, torch.Tensor],
+        r0    : Union[float, torch.Tensor] = 1,
+        **kwargs
+    ) -> torch.Tensor:
+        """
+        The functional form of the expression.
+        """
+        def α(r, *args, **kwargs):
+            return α_i + (α_f-α_i)*sigmoid(r, loc=loc, scale=scale)
+        return θ_logarithmic(α=α, r=r, r0=r0)
+
+    def sample(self, cls, isoA:torch.Tensor, **kwargs) -> None:
+        """
+        Generates random values for the different parameters, which are
+        stored in the attribute `params`.
+
+        Parameters
+        ----------
+        cls : class
+            The galaxy class object.
+
+        isoA : tensor
+            The scaling factors used to rescale the base grid when generating
+            the geometry. The r parameter values are multiplied by this.
+
+        **kwargs
+            Used for possible compatibility with other classes.
+        """
+        super().sample(cls=cls, isoA=isoA, **kwargs)
+
+        arm_count = self.data['arm_count']
+        self.params = ({
+            'α_i'    : tuple(self.α_i(n, device=cls.device) for n in arm_count),            
+            'α_f'    : tuple(self.α_f(n, device=cls.device) for n in arm_count),            
+            'loc'    : tuple(self.loc(n, device=cls.device)*isoA[i] for i,n in enumerate(arm_count)),            
+            'scale'  : tuple(self.scale(n, device=cls.device)*isoA[i]  for i,n in enumerate(arm_count)),            
         })
 
 class Ringermacher(SpiralPattern):
