@@ -3,6 +3,13 @@ Profiles for the spiral arm flux.
 
 Classes
 -------
+CorotatinoModifier
+    Class for modifying the power index at the corotation radius.
+    Useful for creating structures similar to spiral arms branching
+    off the main arm, but with pitch angles of zero. The sigmoidal
+    transformation is modified via
+        p_min + (1 - p_min) ⋅ (2⋅|t - 0.5|)^index
+
 ShockProfile
     Implements a rough approximation to the density profile as the result
     of a shock through the functional form
@@ -18,12 +25,40 @@ ExponentialProfile
 """
 
 import math
+import random
 import torch
 from dataclasses import dataclass
 from galkit.functional import angular_distance, sigmoid, mod_angle
 from typing import Optional, Tuple, Union
 from .modulate import Damping
 from ...random import random_uniform
+
+@dataclass
+class CorotationModifer:
+    """
+    Class for modifying the power index at the corotation radius.
+    Useful for creating structures similar to spiral arms branching
+    off the main arm, but with pitch angles of zero. The sigmoidal
+    transformation is modified via
+
+        p_min + (1 - p_min) ⋅ (2⋅|t - 0.5|)^index
+
+    Parameters
+    ----------
+    p_min : callable, float
+        The minimum value of the modifier.
+    
+    index : callable, float
+        The power index modifier.
+    """
+    p_min : Union[callable, float] = lambda : random.random()
+    index : Union[callable, float] = 2
+
+    def __call__(self, input:torch.Tensor):
+        p_min = self.p_min() if callable(self.p_min) else self.p_min
+        index = self.index() if callable(self.index) else self.index
+        shift = (input - 0.5).abs().mul(2).pow(index)
+        return p_min + (1 - p_min) * shift
 
 @dataclass
 class ShockProfile:
@@ -69,16 +104,17 @@ class ShockProfile:
         of the galaxy and extending well beyond the observable portion
         of the galaxy.
 
+    p_modifier : callable, optional
+        A function that takes as input the sigmoidal transformation
+        across the corotation radius and returns a perturbation mask
+        for modifying the power indices of the pre- and post-shock
+        regimes.
+
     Methods
     -------
     __getitem__(index)
         Returns a dictionary containing the set of parameters associated
         with the given index.
-
-    To Do
-    -----
-    Could implement offsets such that an arm could potentially appear disconnected
-    at the corotation radius.
     """
     corotation : callable = lambda size, device : random_uniform(0.1, 1, 1, device)
     transition : callable = lambda size, device : random_uniform(0.05, 0.15, 1, device)
@@ -86,6 +122,7 @@ class ShockProfile:
     p_arm      : callable = lambda size, device : random_uniform(5, 10, size, device)
     δ_shock    : callable = lambda size, device : random_uniform(0, 0.25, size, device)
     modulate   : Optional[callable] = Damping()   
+    p_modifier : Optional[callable] = CorotationModifer()
 
     def __call__(self,
         r : torch.Tensor,
@@ -140,12 +177,12 @@ class ShockProfile:
             dx = -dx
 
         # Generate the transition across the corotation
-        loc = params['corotation'] * params['isoA']
+        loc = params['corotation']
         loc = loc if loc.nelement() == 1 else loc[arm_index]
         scale = params['transition']
         scale = scale if scale.nelement() == 1 else scale[arm_index]
         t = sigmoid(r, loc=loc, scale=scale)
-  
+
         # Generate the power index
         p_shock = params['p_shock']
         p_shock = p_shock if p_shock.nelement() == 1 else p_shock[arm_index]
@@ -156,6 +193,12 @@ class ShockProfile:
         P1 = p_arm + s
         P2 = p_shock - s
         power = torch.empty_like(P2)
+
+        # Apply modifier
+        if self.p_modifier is not None:
+            mod = self.p_modifier(t)
+            P1 = P1 * mod
+            P2 = P2 * mod
 
         # Interior
         mask = dx < 0
@@ -211,15 +254,14 @@ class ShockProfile:
         """
         self.params = {
             'isoA'      : isoA,
-            'corotation': tuple(self.corotation(size=n, device=cls.device) for n in arm_count),
-            'transition': tuple(self.transition(size=n, device=cls.device) for n in arm_count),
+            'corotation': tuple(self.corotation(size=n, device=cls.device)*isoA[i] for i,n in enumerate(arm_count)),
+            'transition': tuple(self.transition(size=n, device=cls.device)*isoA[i] for i,n in enumerate(arm_count)),
             'p_shock'   : tuple(self.p_shock(size=n, device=cls.device) for n in arm_count),
             'p_arm'     : tuple(self.p_arm(size=n, device=cls.device) for n in arm_count),
             'δ_shock'   : tuple(self.δ_shock(size=n, device=cls.device) for n in arm_count),
         }
         if self.modulate is not None:
             self.modulate.sample(cls=cls, isoA=isoA, arm_count=arm_count, **kwargs)
-
 
     def norm(self,
         p1:Union[float, torch.Tensor], 
