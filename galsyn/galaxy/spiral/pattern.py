@@ -23,7 +23,7 @@ LogarithmicSigmoid
 
 Ringermacher
     Spiral arm pattern drawn from Ringermacher & Mead (2009),  
-        θ(r,Wa,Wb,Wn) = 2⋅Wn⋅arctan(exp(Wa/r) / Wb)
+        θ(r,Wa,Wb,Wn) = 2⋅Wn⋅arctan(exp(-Wa/r) / Wb)
 
 RingermacherPitch
     Spiral arm pattern drawn from Ringermacher & Mead (2009) based on the
