@@ -470,9 +470,11 @@ class Ringermacher(SpiralPattern):
         **kwargs
     ) -> torch.Tensor:
         """
-        The functional form of the expression.
+        The functional form of the expression. Note that the r(θ) definition
+        used by Ringermacher and Meaf (2009) returns a negative value for the
+        radius, so a negative value has been added to the exponent to change the sign.
         """
-        return (2*Wn)*torch.arctan(torch.exp(Wa/r) / Wb)
+        return (2*Wn)*torch.arctan(torch.exp(-Wa/r) / Wb)
 
 class RingermacherPitch(SpiralPattern):
     """
