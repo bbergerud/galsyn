@@ -36,7 +36,7 @@ from galkit.functional import sigmoid
 from typing import Optional, Tuple, Union
 from .logarithmic import θ_logarithmic
 from .profile import ShockProfile
-from ...random import random_normal, random_uniform
+from ...random import random_normal, random_truncated_normal, random_uniform
 
 class SpiralPattern:
     """
@@ -270,7 +270,7 @@ class Logarithmic(SpiralPattern):
         Any additional arguments to pass into the parent class.
     """
     def __init__(self,
-        α : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
+        α : callable = lambda size, device : random_truncated_normal(20, 10, 5, 50, 1, device).deg2rad(),
         **kwargs,
     ):
         self.α = α
@@ -343,8 +343,8 @@ class LogarithmicSigmoid(SpiralPattern):
         returned value is multiplied by the isoA value.
     """
     def __init__(self,
-        α_i     : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
-        α_f     : callable = lambda size, device : random_normal(20, 5, 1, device).clip(5, 50).deg2rad(),
+        α_i     : callable = lambda size, device : random_truncated_normal(20, 10, 5, 50, 1, device).deg2rad(),
+        α_f     : callable = lambda size, device : random_truncated_normal(20, 10, 5, 50, 1, device).deg2rad(),
         loc     : callable = lambda size, device : random_uniform(0, 1.0, 1, device),
         scale   : callable = lambda size, device : random_uniform(0.1, 0.5, 1, device),
         **kwargs,
