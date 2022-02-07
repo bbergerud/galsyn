@@ -31,9 +31,14 @@ Perturbation
 import random
 import torch
 from dataclasses import dataclass
+from scipy.stats import truncnorm
 from typing import Dict, Iterable, Optional, Tuple, Union
 from .dust import DustModel, DustCCM89
 from ..random import perlin2d_octaves
+
+def get_truncnorm(loc, scale, a, b):
+    a, b = (a - loc) / scale, (b - loc) / scale
+    return truncnorm(a=a, b=b, loc=loc, scale=scale).rvs(1).item()
 
 @dataclass
 class PowerTransform:
@@ -119,7 +124,7 @@ class PerlinNoise:
             The 2D noise map.
         """
         return perlin2d_octaves(
-            shape,
+            shape      = shape,
             octaves    = self.octaves() if callable(self.octaves) else self.octaves,
             shear      = self.shear() if callable(self.shear) else self.shear,
             resolution = self.resolution() if callable(self.resolution) else self.resolution,
@@ -155,8 +160,8 @@ class Disk(PerlinNoise):
     """
     def __init__(self,
         fraction  : Union[callable, float] = lambda : random.uniform(0.00, 1.00),
-        shear     : Union[callable, float] = lambda : random.uniform(0.00,0.75),
-        transform : Optional[callable]     = PowerTransform(lambda : random.uniform(0.5, 1.5)),
+        shear     : Union[callable, float] = lambda : get_truncnorm(0.5, 0.1, 0, 1),
+        transform : Optional[callable]     = PowerTransform(lambda : get_truncnorm(1, 0.25, 0, 2)),
         **kwargs,
     ):
         self.fraction = fraction
@@ -193,8 +198,8 @@ class Dust(PerlinNoise):
     """
     def __init__(self, 
         dust_model  : DustModel = DustCCM89(),
-        shear       : Union[callable, float] = lambda : random.uniform(0.00, 0.75),
-        transform   : Optional[callable] = PowerTransform(lambda : random.uniform(0.5, 5.0), lambda : random.uniform(0,5)),
+        shear       : Union[callable, float] = lambda : get_truncnorm(0.5, 0.1, 0, 1.0),
+        transform   : Optional[callable] = PowerTransform(lambda : random.uniform(0.5, 5.0), lambda : get_truncnorm(1, 0.25, 0, 3)),
         **kwargs
     ):
         self.dust_model = dust_model
@@ -254,8 +259,8 @@ class HII(PerlinNoise):
         Any additional argument to pass into the parent class constructor.
     """
     def __init__(self, 
-        fraction  : Union[callable, float] = lambda : random.uniform(0.03, 0.33),
-        shear     : Union[callable, float] = lambda : random.uniform(0.00, 0.50),
+        fraction  : Union[callable, float] = lambda : get_truncnorm(0.1, 0.05, 0, 0.3),
+        shear     : Union[callable, float] = lambda : get_truncnorm(0.1, 0.05, 0, 1.0),
         transform : Optional[callable]     = PowerTransform(lambda : random.uniform(5, 10)),
         **kwargs,
     ):
@@ -346,7 +351,7 @@ class Perturbation:
                             if k.startswith(subcomponent):
                                 for (kk,vv) in v.items():
                                     if p is None:
-                                        p = perturbation(vv.shape[-2:], filter_bands=flux[k].keys(), device=self.device, grid_kwargs={'scale': scale}, rotation=rotation, **geometry[subcomponent])
+                                        p = perturbation(shape=vv.shape[-2:], filter_bands=flux[k].keys(), device=self.device, grid_kwargs={'scale': scale}, rotation=rotation, **geometry[subcomponent])
                                     flux[k][kk] = (p[kk] if isinstance(p,dict) else p) * vv
 
         return flux
