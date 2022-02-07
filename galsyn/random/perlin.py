@@ -10,10 +10,211 @@ perlin_2d(shape, θ, r, resolution, corner_grid, device, fade,
 """
 
 import math
+import numpy
 import torch
+from dataclasses import dataclass
 from galkit.spatial import coordinate, grid
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
+@dataclass
+class Perlin2D:
+    """
+    
+    Examples
+    --------
+    import matplotlib.pyplot as plt
+    from galkit.spatial import coordinate, grid
+    from galsyn.random.perlin import Perlin2D
+
+    h, w = coordinate.cartesian(
+        grid.pytorch_grid(100,100,dense=True),
+        scale = 10,
+    )
+
+    p = Perlin2D()
+
+    output = p(h,w)
+
+    fig, ax = plt.subplots()
+    ax.imshow(output.squeeze())
+    fig.show()
+    """
+    repeat:int = 256
+    corner_grad:bool = True
+    fade:callable = lambda t: 6*t**5 - 15*t**4 + 10*t**3
+    transform:Optional[callable] = None
+
+    def __call__(self,
+        x:Union[numpy.ndarray, torch.Tensor],
+        y:Union[numpy.ndarray, torch.Tensor]
+    ):
+
+        # Determine the number of grid points to generate and modulate any
+        # values outside the grid
+        xpts = min(x.abs().max().long()+1, self.repeat)
+        ypts = min(y.abs().max().long()+1, self.repeat)
+
+        if xpts == self.repeat:
+            x = x % self.repeat
+        if ypts == self.repeat:
+            y = y % self.repeat
+
+        # Calculate the corner grid positions of each pixel
+        x_floor = x.floor().long()
+        y_floor = y.floor().long()
+
+        x_dist = x - x_floor
+        y_dist = y - y_floor
+        
+        # Generate the gradients
+        if self.corner_grad:
+            if isinstance(x, torch.Tensor):
+                angles = lambda h, w: torch.randn((h,w), device=x.device).sign()
+            else:
+                angles = lambda h, w: numpy.random.choice([-1,1], size=(h,w), replace=True)
+
+            grad_x = angles(xpts+1, ypts+1)
+            grad_y = angles(xpts+1, ypts+1)
+
+        else:
+            if isinstance(x, torch.Tensor):
+                angles = 2 * math.pi * torch.randn(xpts+1, ypts+1, device=x.device)
+            else:
+                angles = 2 * math.pi * numpy.random.randn(xpts+1, ypts+1)
+
+            grad_x = torch.cos(angles)
+            grad_y = torch.sin(angles)
+        
+        # Calalate the dot products
+        dot = lambda dx, dy : (x_dist - dx)*grad_x[x_floor + dx, y_floor + dy] \
+                            + (y_dist - dy)*grad_y[x_floor + dx, y_floor + dy]
+
+        n00 = dot(0,0)
+        n01 = dot(0,1)
+        n10 = dot(1,0)
+        n11 = dot(1,1)
+
+        # Interpolate
+        u = self.fade(x_dist)
+        v = self.fade(y_dist)
+
+        x1 = torch.lerp(n00, n10, u)
+        x2 = torch.lerp(n01, n11, u)
+        yf = torch.lerp(x1, x2, v)
+
+        if self.transform is not None:
+            yf = self.transform(yf)
+
+        return yf
+
+@dataclass
+class PerlinOctaves2D(Perlin2D):
+    octaves:int=5
+    lacunarity:float = 2.0
+    persistence:float = 0.5
+    repeat:int = 256
+    corner_grad:bool = True
+    fade:callable = lambda t: 6*t**5 - 15*t**4 + 10*t**3
+    transform:Optional[callable] = None
+
+    def __call__(self,
+        x:Union[numpy.ndarray, torch.Tensor],
+        y:Union[numpy.ndarray, torch.Tensor]
+    ):
+        noise = (torch.zeros_like if isinstance(x, torch.Tensor) else numpy.zeros_like)(x)
+
+        frequency = 1
+        amplitude = 1
+        max_amplitude = 0
+
+        for _ in range(self.octaves):
+            noise += amplitude * super().__call__(x=x*(1/frequency), y=y*(1/frequency))
+
+            max_amplitude += amplitude
+            frequency *= self.lacunarity
+            amplitude *= self.persistence
+
+        noise = noise / max_amplitude
+        return noise if self.transform is None else self.transform(noise)
+
+def perlin2d_octaves(
+    octaves:int=5,
+    lacunarity:float = 2.0,
+    persistence:float = 0.,
+    resolution:Tuple[float,float] = (0.05, 0.05),
+    repeat:int = 256,
+    corner_grad:bool = True,
+    fade:callable = lambda t: 6*t**5 - 15*t**4 + 10*t**3,
+    transform:Optional[callable] = None,
+    shape:Optional[Tuple[int,int]] = None,
+    θ:Optional[torch.Tensor] = None,
+    r:Optional[torch.Tensor] = None,
+    shear:Optional[float] = 0.5,
+    device:Optional[torch.device] = None,
+    rotation:Optional[callable] = None,
+    grid_kwargs:dict = {},
+    grid_base:grid.Grid = grid.PytorchGrid(),
+):
+    """
+    import matplotlib.pyplot as plt
+    from galkit.spatial import coordinate, grid
+    from galsyn.random.perlin import perlin2d_octaves
+
+    θ, r = coordinate.polar(
+        grid = grid.pytorch_grid(100,100),
+    )
+
+    output = perlin2d_octaves(θ=θ, r=r, rotation = lambda θ, r: r.add(1e-6).log().div(math.tan(math.pi/6)))
+
+    fig, ax = plt.subplots()
+    ax.imshow(output.squeeze())
+    fig.show()
+    """
+    if (θ is not None) and (r is not None):
+        if (shear > 0) and (rotation is not None):
+            θ = θ - shear * (rotation(θ=θ, r=r) if callable(rotation) else rotation)
+
+        if 'scale' in grid_kwargs:
+            r = r / grid_kwargs['scale']
+        
+        x = r * θ.cos()
+        y = r * θ.sin()
+
+        # Convert to pixel grid
+        x, y = grid_base.to_pixel_grid(
+            grid  = [x,y],
+            shape = x.shape[-2:]
+        )
+
+        # Remove negative values
+        x = x.squeeze(0) - x.min()
+        y = y.squeeze(0) - y.min()
+
+    else:
+
+        x = torch.arange(shape[0], device=device)
+        y = torch.arange(shape[1], device=device)
+        x, y = torch.meshgrid([x,y])
+
+    # Rescale to (0 -> 1)
+    x = x / (x.size(-2) * resolution[0])
+    y = y / (y.size(-1) * resolution[1])
+
+    return PerlinOctaves2D(
+        corner_grad=corner_grad,
+        fade=fade,
+        lacunarity=lacunarity,
+        octaves=octaves,
+        persistence=persistence,
+        repeat=repeat,
+        transform=transform,
+    )(x=x, y=y)
+
+
+
+
+
+'''
 def perlin2d(
     shape       : Optional[Tuple[int,int]] = None,
     θ           : Optional[torch.Tensor] = None,
@@ -331,3 +532,4 @@ def perlin2d_octaves(
         noise = transform(noise)
     
     return noise
+'''
