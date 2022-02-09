@@ -140,7 +140,7 @@ class PerlinOctaves2D(Perlin2D):
 def perlin2d_octaves(
     octaves:int=5,
     lacunarity:float = 2.0,
-    persistence:float = 0.,
+    persistence:float = 0.5,
     resolution:Tuple[float,float] = (0.05, 0.05),
     repeat:int = 256,
     corner_grad:bool = True,
