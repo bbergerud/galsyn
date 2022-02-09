@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from galkit.spatial import coordinate, grid
 from typing import Optional, Tuple, Union
 
+
 @dataclass
 class Perlin2D:
     """
@@ -28,7 +29,6 @@ class Perlin2D:
 
     h, w = coordinate.cartesian(
         grid.pytorch_grid(100,100,dense=True),
-        scale = 10,
     )
 
     p = Perlin2D()
@@ -42,7 +42,6 @@ class Perlin2D:
     repeat:int = 256
     corner_grad:bool = True
     fade:callable = lambda t: 6*t**5 - 15*t**4 + 10*t**3
-    transform:Optional[callable] = None
 
     def __call__(self,
         x:Union[numpy.ndarray, torch.Tensor],
@@ -102,14 +101,32 @@ class Perlin2D:
         x2 = torch.lerp(n01, n11, u)
         yf = torch.lerp(x1, x2, v)
 
-        if self.transform is not None:
-            yf = self.transform(yf)
-
         return yf
 
 @dataclass
 class PerlinOctaves2D(Perlin2D):
-    octaves:int=5
+    """
+    
+    Examples
+    --------
+    import matplotlib.pyplot as plt
+    from galkit.spatial import coordinate, grid
+    from galsyn.random.perlin import PerlinOctaves2D
+
+    h, w = coordinate.cartesian(
+        grid.pixel_grid(100,100,dense=True),
+        scale = 0.1,
+    )
+
+    p = PerlinOctaves2D(2)
+
+    output = p(h,-w)
+
+    fig, ax = plt.subplots()
+    ax.imshow(output.squeeze())
+    fig.show()
+    """
+    octaves:int=10
     lacunarity:float = 2.0
     persistence:float = 0.5
     repeat:int = 256
@@ -128,7 +145,7 @@ class PerlinOctaves2D(Perlin2D):
         max_amplitude = 0
 
         for _ in range(self.octaves):
-            noise += amplitude * super().__call__(x=x*(1/frequency), y=y*(1/frequency))
+            noise += amplitude * super().__call__(x=x*frequency, y=y*frequency)
 
             max_amplitude += amplitude
             frequency *= self.lacunarity
@@ -156,6 +173,7 @@ def perlin2d_octaves(
     grid_base:grid.Grid = grid.PytorchGrid(),
 ):
     """
+    import math
     import matplotlib.pyplot as plt
     from galkit.spatial import coordinate, grid
     from galsyn.random.perlin import perlin2d_octaves
@@ -164,7 +182,7 @@ def perlin2d_octaves(
         grid = grid.pytorch_grid(100,100),
     )
 
-    output = perlin2d_octaves(θ=θ, r=r, rotation = lambda θ, r: r.add(1e-6).log().div(math.tan(math.pi/6)))
+    output = perlin2d_octaves(θ=θ, r=r, rotation=None)# = lambda θ, r: r.add(1e-6).log().div(math.tan(math.pi/6)))
 
     fig, ax = plt.subplots()
     ax.imshow(output.squeeze())
@@ -191,7 +209,6 @@ def perlin2d_octaves(
         y = y.squeeze(0) - y.min()
 
     else:
-
         x = torch.arange(shape[0], device=device)
         y = torch.arange(shape[1], device=device)
         x, y = torch.meshgrid([x,y])
