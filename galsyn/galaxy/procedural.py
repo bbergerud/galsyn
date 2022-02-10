@@ -33,7 +33,7 @@ import torch
 from dataclasses import dataclass
 from scipy.stats import truncnorm
 from typing import Dict, Iterable, Optional, Tuple, Union
-from .dust import DustModel, DustCCM89
+from .dust import DustModel, CCM89_OpticalIR
 from ..random import perlin2d_octaves
 
 def get_truncnorm(loc, scale, a, b):
@@ -197,7 +197,7 @@ class Dust(PerlinNoise):
         Any additional arguments to supply to the parent class.
     """
     def __init__(self, 
-        dust_model  : DustModel = DustCCM89(),
+        dust_model  : DustModel = CCM89_OpticalIR(),
         shear       : Union[callable, float] = lambda : get_truncnorm(0.5, 0.1, 0, 1.0),
         transform   : Optional[callable] = PowerTransform(lambda : random.uniform(0.5, 5.0), lambda : get_truncnorm(1, 0.25, 0, 3)),
         **kwargs
