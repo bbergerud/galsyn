@@ -91,6 +91,8 @@ class ImageGenerator:
         output_bar_s2n : bool = False,
         output_galaxy_mask : bool = False,
         output_galaxy_s2n : bool = False,
+        output_star_mask : bool = False,
+        output_star_s2n : bool = False,
         output_projection : bool = True,
         oversample : Union[callable, int] = 2,
         shape : Union[int, callable] = lambda : numpy.random.choice(numpy.arange(48,257,16)),
@@ -175,6 +177,8 @@ class ImageGenerator:
 
         output_star = self.StarGenerator(
             stars_per_pixel = self.stars_per_pixel() if callable(self.stars_per_pixel) else self.stars_per_pixel,
+            output_star_mask = self.output_star_mask,
+            output_star_s2n = self.output_star_s2n,
             **kwargs
         )
 
@@ -195,7 +199,7 @@ class ImageGenerator:
         return {
             'image': torch.cat([v for v in image.values()]),
             **{k:v for k,v in output_galaxy.items() if k != 'flux'},
-            **{k:v for k,v in output_star.items() if k != 'flux'},
+            **{f'star_{k}':v for k,v in output_star.items() if k != 'flux'},
             **{f'bkg_galaxy_{k}':v for k,v in output_bkg.items() if k != 'flux'},
         }
 
