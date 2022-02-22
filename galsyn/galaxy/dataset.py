@@ -856,7 +856,7 @@ class BackgroundGalaxy:
             if output_galaxy_s2n:
                 output['s2n'] = s2n
             if output_galaxy_mask:
-                output['mask'] = tuple(s > s2n_mask_threshold for s in s2n)
+                output['mask'] = tuple((s > s2n_mask_threshold).float() for s in s2n)
 
         if apply_noise:
             flux = self.generators[0].apply_shot_noise_to_counts(flux, sky_detector=sky_detector)

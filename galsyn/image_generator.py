@@ -31,15 +31,33 @@ class ImageGenerator:
 
     Examples
     --------
+    import torch
     import matplotlib.pyplot as plt
     from galkit.functional import arcsinh_stretch
+    from galsyn.galaxy import Gadotti, GeometrySampler
     from galsyn.image_generator import ImageGenerator
+    from galsyn.utils import load_local_generator
 
-    im = ImageGenerator()
+    im = ImageGenerator(
+        GalaxyGenerators = [
+            Gadotti(
+                load_local_generator('gadotti_2009_bulge_disk.pkl'),
+                geometry_sampler = GeometrySampler(q_disk_sampler = lambda size, device : torch.ones(size, device=device))
+            )
+        ], 
+        shape=256,
+        output_bkg_galaxy_mask=True,
+        isoA_scale = lambda size, device : torch.ones(size, device=device),
+        arm_count = lambda size, device : torch.ones(size, dtype=torch.int)*2)
     output = im()
 
-    fig, ax = plt.subplots()
-    ax.imshow(arcsinh_stretch(output['image']).T)
+    fig, ax = plt.subplots(ncols=2)
+    ax[0].imshow(arcsinh_stretch(output['image']).T)
+    try:
+        ax[1].imshow(output['arm_mask'][0].sum(0).T.squeeze())
+    except:
+        ax[1].imshow(torch.zeros_like(output['image'].T.squeeze(0)))
+
     fig.show()
     """
     def __init__(self,
@@ -67,6 +85,8 @@ class ImageGenerator:
         plate_scale : Union[callable,float] = 0.396,
         output_arm_mask : bool = True,
         output_arm_s2n : bool = False,
+        output_bkg_galaxy_mask : bool = False,
+        output_bkg_galaxy_s2n  : bool = False,
         output_bar_mask : bool = False,
         output_bar_s2n : bool = False,
         output_galaxy_mask : bool = False,
@@ -142,6 +162,8 @@ class ImageGenerator:
                     isoA_metric = self.isoA_metric,
                     isoA_scale  = self.isoA_scale_bkg,
                     isoA_value  = self.isoA_value,
+                    output_galaxy_mask = self.output_bkg_galaxy_mask,
+                    output_galaxy_s2n = self.output_bkg_galaxy_s2n,
                     **kwargs,
                 )
                 break
@@ -174,6 +196,7 @@ class ImageGenerator:
             'image': torch.cat([v for v in image.values()]),
             **{k:v for k,v in output_galaxy.items() if k != 'flux'},
             **{k:v for k,v in output_star.items() if k != 'flux'},
+            **{f'bkg_galaxy_{k}':v for k,v in output_bkg.items() if k != 'flux'},
         }
 
 class SyntheticDataset(ImageGenerator, torch.utils.data.Dataset):
