@@ -13,8 +13,8 @@ class StarGenerator(BaseGenerator):
     Attributes
     ----------
     data : DataFrame
-        When the `generate` method is executed, the generated synthetic
-        sample is stored as this attribute.
+        When the sample method is executed, the generated synthetic
+        data is stored as this attribute.
 
     device : torch.device
         The device to generate data on.
@@ -291,7 +291,7 @@ class StarGenerator(BaseGenerator):
             if merge_masks:
                 masks = torch.stack([masks[k] for k in filter_bands], dim=1)
                 masks = torch.amax(masks, 1)
-            output['mask'] = masks
+            output['mask'] = masks.float()
 
         if output_star_s2n:
             s2n = {k:torch.cat(s2n[k], dim=0) for k in filter_bands}
