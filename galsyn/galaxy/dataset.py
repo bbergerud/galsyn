@@ -745,6 +745,7 @@ class BackgroundGalaxy:
         plate_scale : Union[callable,float] = 0.396,
         size  : Optional[int] = None,
         s2n_mask_threshold : float = 1,
+        s2n_operation      : Optional[callable] = torch.mean,
     ):
         """
         Parameters
@@ -814,14 +815,9 @@ class BackgroundGalaxy:
             if n == 0:
                 zero = torch.zeros((1,*shape), device=self.device)
                 flux.append({k:zero for k in filter_bands})
-                if output_galaxy_mask:
-                    masks['mask'] = zero
-                if output_galaxy_s2n:
-                    masks['s2n'] = zero
                 continue
 
             images  = {k:0. for k in filter_bands}
-            masks   = {}
             samples = numpy.random.randint(len(self.generators), size=n)
             samples = Counter(samples)
 
@@ -852,7 +848,7 @@ class BackgroundGalaxy:
         output = {}
         if output_galaxy_s2n | output_galaxy_mask:
             noise = self.generators[0].get_noise_level(flux, sky_detector=sky_detector, plate_scale=plate_scale)
-            s2n = self.generators[0].get_s2n(flux, noise, sky_detector=sky_detector, operation=torch.mean)
+            s2n = self.generators[0].get_s2n(flux, noise, sky_detector=sky_detector, operation=s2n_operation)
             if output_galaxy_s2n:
                 output['s2n'] = s2n
             if output_galaxy_mask:
