@@ -21,8 +21,8 @@ class Damping:
     Applies exponential damping at distances interior to r_min
     and exterior to r_max through the transformations
 
-        exp(-(r_min - r) / σ_min)       [r < r_min]
-        exp(-(r - r_max) / σ_max)       [r > r_max]
+        exp(-((r_min - r) / σ_min)^power)       [r < r_min]
+        exp(-((r - r_max) / σ_max)^power)       [r > r_max]
 
     Parameters
     ----------
@@ -49,11 +49,15 @@ class Damping:
         the device and returns the σ_max values relative to
         the base r_max value. If None, then the transition is
         abrupt.
+
+    power : float
+        Power index to modulate the damping by.
     """
     rmin_sampler : Optional[callable] = lambda size, device: random_uniform(0.75,1.25,size,device)
     rmax_sampler : Optional[callable] = lambda size, device: random_uniform(0.50,1.50,size,device)
     σmin_sampler : Optional[callable] = lambda size, device: random_uniform(0.05,0.10,size,device)
     σmax_sampler : Optional[callable] = lambda size, device: random_uniform(0.10,0.20,size,device)
+    power : float = 2
 
     def __call__(self,
         r:torch.Tensor, 
@@ -92,7 +96,7 @@ class Damping:
                 f[mask] = 0.
             else:
                 z = r[mask] - params['r_max']
-                f[mask] = torch.exp(-z / params['σ_max'])
+                f[mask] = torch.exp(-(z / params['σ_max'])**self.power)
 
         if params['r_min'] is not None:
             mask = r < params['r_min']
@@ -100,7 +104,7 @@ class Damping:
                 f[mask] = 0.
             else:
                 z = params['r_min'] - r[mask]
-                f[mask] = torch.exp(-z / params['σ_min'])
+                f[mask] = torch.exp(-(z / params['σ_min'])**self.power)
 
         return f
 
